@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from "react";
 import GeoLocationComponent from "../../component/Geolocation";
 import instance from "../../api/api";
-import { Button, Card, Col, Row, Select, Space, Tag, message } from "antd";
+import {
+  Button,
+  Card,
+  Col,
+  Input,
+  Row,
+  Select,
+  Space,
+  Tag,
+  message,
+} from "antd";
 import Meta from "antd/es/card/Meta";
 import CommonModal from "../../component/CommonModal";
 import { removeDuplicates } from "../../utils/helper";
@@ -9,6 +19,7 @@ import { removeDuplicates } from "../../utils/helper";
 export default function Salon() {
   let [cords, setCords] = useState(null);
   const [salons, setSalons] = useState([]);
+  const [filteredSalon, setFilteredSalon] = useState([]);
   const [book, setBook] = useState(false);
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [salonDetails, setSalonDetails] = useState(null);
@@ -17,15 +28,17 @@ export default function Salon() {
   const [selectedBarber, setSelectedBarber] = useState(null);
   const [slots, setSlots] = useState([]);
   const [id, setId] = useState(null);
+  const [radius, setRadius] = useState(null);
 
   const getCords = (cords) => {
     setCords(cords);
   };
 
-  const fetchSalons = async (cords) => {
+  const fetchSalons = async (cords, radius = 10000) => {
     let data = await instance.post("/salon/get-nearby-salons", {
       lat: cords.latitude,
       long: cords.longitude,
+      radius,
     });
 
     setSalons(data.result);
@@ -235,9 +248,56 @@ export default function Salon() {
   return (
     <div>
       <GeoLocationComponent getCords={getCords} />
-      <h2>Salons near me</h2>
-      <Row gutter={[48, 16]}>
-        {salons.length > 0 ? (
+      <div
+        style={{
+          display: "flex",
+          marginTop: "20px",
+          justifyContent: "center",
+        }}
+      >
+        <Input
+          size="large"
+          placeholder="Search salons..."
+          style={{ width: "300px" }}
+          onChange={(e) => {
+            let filtered = salons.filter((salon) =>
+              salon.name?.toLowerCase().includes(e.target.value.toLowerCase())
+            );
+            setFilteredSalon([...filtered]);
+          }}
+        />
+      </div>
+      <Space.Compact
+        style={{
+          width: "300px",
+        }}
+      >
+        <Input
+          placeholder="Search radius in meters"
+          onChange={(e) => setRadius(e.target.value)}
+        />
+        <Button type="primary" onClick={() => fetchSalons(cords, radius)}>
+          Apply
+        </Button>
+      </Space.Compact>
+      <h2>Salons near you</h2>
+      <Row gutter={[40, 16]}>
+        {filteredSalon.length > 0 ? (
+          filteredSalon.map((salon) => (
+            <Col span={4} key={salon._id}>
+              <Card
+                hoverable
+                cover={<img alt="example" src={salon.image} height={200} />}
+                onClick={() => {
+                  setSelectedSalon(salon);
+                  setBook(true);
+                }}
+              >
+                <Meta title={salon.name} />
+              </Card>
+            </Col>
+          ))
+        ) : salons.length > 0 ? (
           salons.map((salon) => (
             <Col span={4} key={salon._id}>
               <Card
